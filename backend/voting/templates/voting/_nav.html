@@ -1,0 +1,36 @@
+<header class="site-nav">
+  <a href="{% url 'voting:contest_list' %}" class="brand">Crowna</a>
+  <nav>
+    {% if user.is_authenticated %}
+      <span class="who">Signed in as <strong>{{ user.username }}</strong></span>
+      <form method="post" action="{% url 'voting:logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="link-btn">Log out</button>
+      </form>
+    {% else %}
+      <a href="{% url 'voting:login' %}">Sign in</a>
+      <a href="{% url 'voting:signup' %}" class="cta">Sign up</a>
+    {% endif %}
+  </nav>
+</header>
+
+<style>
+  .site-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 0; border-bottom: 1px solid #eee; margin-bottom: 2rem;
+    font-family: system-ui, sans-serif;
+  }
+  .site-nav .brand { font-size: 1.4rem; font-weight: 700; color: #06c; text-decoration: none; }
+  .site-nav nav { display: flex; align-items: center; gap: 1rem; font-size: 0.95rem; }
+  .site-nav a { color: #06c; text-decoration: none; }
+  .site-nav a:hover { text-decoration: underline; }
+  .site-nav .cta { background: #06c; color: #fff; padding: 0.4rem 0.9rem; border-radius: 4px; }
+  .site-nav .cta:hover { background: #0055aa; text-decoration: none; }
+  .site-nav .who { color: #555; }
+  .logout-form { display: inline; }
+  .link-btn {
+    background: none; border: none; color: #06c; cursor: pointer;
+    padding: 0; font: inherit; text-decoration: none;
+  }
+  .link-btn:hover { text-decoration: underline; }
+</style>

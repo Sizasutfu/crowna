@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ contest.title }} — Crowna</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 0 1.25rem 3rem; color: #222; }
+    a { color: #06c; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .hero {
+      width: 100%; max-height: 280px; object-fit: cover;
+      border-radius: 10px; margin-bottom: 1.5rem; display: block;
+    }
+
+    .status { color: #555; margin-bottom: 1.5rem; }
+    .closed { color: #b00; font-weight: 600; }
+
+    ol.leaderboard { list-style: none; padding: 0; margin: 0; }
+    ol.leaderboard li {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 0.75rem 0; border-bottom: 1px solid #f0f0f0;
+    }
+    ol.leaderboard li:last-child { border-bottom: none; }
+
+    .avatar {
+      height: 56px; width: 56px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0; display: block;
+      background: #eee;
+    }
+    .avatar-placeholder {
+      height: 56px; width: 56px; border-radius: 50%; flex-shrink: 0;
+      background: #eee; display: flex; align-items: center; justify-content: center;
+      color: #aaa; font-weight: 600; font-size: 1rem;
+    }
+
+    .info { flex: 1; min-width: 0; }
+    .name { font-weight: 600; color: #222; }
+    .name:hover { color: #06c; }
+    .votes { color: #333; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+
+    form { display: inline; }
+    button {
+      cursor: pointer; padding: 0.45rem 1rem; border: none; border-radius: 6px;
+      background: #06c; color: #fff; font-size: 0.9rem;
+    }
+    button:hover { background: #0055aa; }
+    .voted { color: #080; font-size: 0.9rem; white-space: nowrap; }
+
+    .empty { color: #888; font-style: italic; }
+  </style>
+</head>
+<body>
+  {% include "voting/_nav.html" %}
+
+  {% if contest.image %}
+    <img class="hero" src="{{ contest.image.url }}" alt="{{ contest.title }}">
+  {% endif %}
+
+  <h1>{{ contest.title }}</h1>
+  <p class="status">
+    Status: {{ contest.get_status_display }}
+    {% if not is_open %} — <span class="closed">voting closed</span>{% endif %}
+  </p>
+
+  <ol class="leaderboard">
+    {% for c in leaderboard %}
+      <li>
+        {% if c.image %}
+          <img class="avatar" src="{{ c.image.url }}" alt="{{ c.name }}">
+        {% else %}
+          <div class="avatar-placeholder">{{ c.name|slice:":1"|upper }}</div>
+        {% endif %}
+
+        <div class="info">
+          <a class="name" href="{% url 'voting:contestant_detail' c.id %}">{{ c.name }}</a>
+          <div class="votes">{{ c.vote_count }} vote{{ c.vote_count|pluralize }}</div>
+        </div>
+
+        {% if is_open %}
+          {% if user_voted %}
+            <span class="voted">✓ you already voted</span>
+          {% else %}
+            <form method="post" action="{% url 'voting:cast_vote' contest.id c.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit">Vote</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="empty">No contestants yet.</li>
+    {% endfor %}
+  </ol>
+</body>
+</html>
