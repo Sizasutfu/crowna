@@ -1,0 +1,107 @@
+{% extends "voting/base.html" %}
+
+{% block title %}{% if winners %}{% for w in winners %}{{ w.name }}{% if not forloop.last %} & {% endif %}{% endfor %} won {{ contest.title }}{% else %}{{ contest.title }} — Results{% endif %} — Crowna{% endblock %}
+
+{% block meta %}
+<meta property="og:title" content="{% if winners %}{% for w in winners %}{{ w.name }}{% if not forloop.last %} & {% endif %}{% endfor %} won {{ contest.title }}{% else %}{{ contest.title }} — Results{% endif %}">
+<meta property="og:description" content="{{ share_text }}">
+<meta property="og:url" content="{{ share_url }}">
+<meta property="og:type" content="article">
+{% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
+<meta name="twitter:card" content="{% if og_image %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ contest.title }} — Crowna">
+<meta name="twitter:description" content="{{ share_text }}">
+{% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="winner-hero">
+  <div class="wrap winner-inner">
+    {% if winners %}
+      <span class="kicker">{% if winners|length == 1 %}The winner{% else %}Joint winners{% endif %}</span>
+
+      <div class="winner-block">
+        {% for w in winners %}
+          <div style="display: flex; align-items: center; gap: var(--sp-6); flex-wrap: wrap;">
+            {% if w.image %}
+              <img class="winner-avatar" src="{{ w.image.url }}" alt="{{ w.name }}">
+            {% else %}
+              <div class="winner-avatar-ph">{{ w.name|slice:":1"|upper }}</div>
+            {% endif %}
+            <div>
+              <div class="winner-name">{{ w.name }}</div>
+              <div class="winner-sub">{{ w.vote_count }} vote{{ w.vote_count|pluralize }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <p class="lede">
+        In <strong style="color: var(--paper); font-weight: 500;">{{ contest.title }}</strong>
+        {% if contest.closed_at %}· closed {{ contest.closed_at|date:"F j, Y" }}{% endif %}
+      </p>
+
+      <div class="share-row">
+        <span class="label">Share these results</span>
+        <a href="https://twitter.com/intent/tweet?text={{ share_text|urlencode }}&url={{ share_url|urlencode }}" target="_blank" rel="noopener">X / Twitter</a>
+        <a href="https://wa.me/?text={{ share_text|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener">WhatsApp</a>
+        <button type="button" onclick="navigator.clipboard.writeText('{{ share_url }}').then(() => { this.textContent = 'Copied'; setTimeout(() => this.textContent = 'Copy link', 2000); })">Copy link</button>
+      </div>
+
+    {% else %}
+      <span class="kicker">Results</span>
+      <h1>{{ contest.title }}</h1>
+      <p class="lede">No votes were cast in this contest.</p>
+    {% endif %}
+  </div>
+</div>
+
+<section>
+  <div class="wrap wrap-narrow">
+    <div class="section-head">
+      <h2>Final standings</h2>
+      <a href="{% url 'voting:contest_list' %}" class="text-link">All contests</a>
+    </div>
+
+    <ul class="rows">
+      {% for c in leaderboard %}
+        <li class="row{% if c in winners %} is-winner{% endif %}">
+          <span class="rank">{{ forloop.counter }}</span>
+          {% if c.image %}
+            <img class="avatar" src="{{ c.image.url }}" alt="{{ c.name }}">
+          {% else %}
+            <div class="avatar-ph">{{ c.name|slice:":1"|upper }}</div>
+          {% endif %}
+          <div class="row-main">
+            <a class="row-name" href="{% url 'voting:contestant_detail' c.id %}">{{ c.name }}</a>
+            {% if c in winners %}<div class="row-sub" style="color: var(--wine);">Winner</div>{% endif %}
+          </div>
+          <div class="row-votes">
+            {{ c.vote_count }}<small>vote{{ c.vote_count|pluralize }}</small>
+          </div>
+        </li>
+      {% empty %}
+        <li class="empty">No contestants in this contest.</li>
+      {% endfor %}
+    </ul>
+
+    <div class="stat-grid" style="margin-top: var(--sp-7);">
+      <div class="stat-cell">
+        <div class="num">{{ total_votes }}</div>
+        <div class="lbl">Total votes</div>
+      </div>
+      <div class="stat-cell">
+        <div class="num">{{ leaderboard|length }}</div>
+        <div class="lbl">Contestants</div>
+      </div>
+      {% if contest.closed_at %}
+        <div class="stat-cell">
+          <div class="num">{{ contest.closed_at|date:"M j" }}</div>
+          <div class="lbl">Closed</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

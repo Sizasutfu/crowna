@@ -1,94 +1,53 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Sign up — Crowna</title>
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        max-width: 400px;
-        margin: 4rem auto;
-        padding: 0 1rem;
-      }
-      h1 {
-        margin-bottom: 1.5rem;
-      }
-      label {
-        display: block;
-        margin-bottom: 1rem;
-      }
-      input {
-        width: 100%;
-        padding: 0.5rem;
-        margin-top: 0.25rem;
-        box-sizing: border-box;
-      }
-      .helptext {
-        font-size: 0.85rem;
-        color: #666;
-        display: block;
-        margin-top: 0.25rem;
-      }
-      ul.errorlist {
-        color: #b00;
-        padding-left: 1.2rem;
-        font-size: 0.9rem;
-        margin: 0.25rem 0 0;
-      }
-      button {
-        width: 100%;
-        padding: 0.6rem;
-        cursor: pointer;
-        margin-top: 0.5rem;
-      }
-      .links {
-        margin-top: 1rem;
-        text-align: center;
-        font-size: 0.9rem;
-      }
-    </style>
-  </head>
-  <body>
-    {% include "voting/_nav.html" %}
-    <h1>Create your Crowna account</h1>
+{% extends "voting/base.html" %}
 
-    <form method="post" novalidate>
-      {% csrf_token %} {% if form.non_field_errors %}
-      <div class="errorlist">{{ form.non_field_errors }}</div>
-      {% endif %}
+{% block title %}Create your account — Crowna{% endblock %}
 
-      <label>
-        Username {{ form.username }} {% if form.username.errors %}{{
-        form.username.errors }}{% endif %} {% if form.username.help_text %}<span
-          class="helptext"
-          >{{ form.username.help_text }}</span
-        >{% endif %}
-      </label>
+{% block content %}
+<div class="form-shell">
+  <h1>Create your account.</h1>
+  <p class="sub">It takes a minute. Then you can vote in every contest.</p>
 
-      <label>
-        Email {{ form.email }} {% if form.email.errors %}{{ form.email.errors
-        }}{% endif %} {% if form.email.help_text %}<span class="helptext"
-          >{{ form.email.help_text }}</span
-        >{% endif %}
-      </label>
+  <form method="post" novalidate>
+    {% csrf_token %}
 
-      <label>
-        Password {{ form.password1 }} {% if form.password1.errors %}{{
-        form.password1.errors }}{% endif %} {% if form.password1.help_text
-        %}<span class="helptext">{{ form.password1.help_text }}</span>{% endif
-        %}
-      </label>
+    {% if form.non_field_errors %}
+      <div class="form-alert">{{ form.non_field_errors }}</div>
+    {% endif %}
 
-      <label>
-        Confirm password {{ form.password2 }} {% if form.password2.errors %}{{
-        form.password2.errors }}{% endif %}
-      </label>
+    <div class="form-field">
+      <label for="{{ form.username.id_for_label }}">Username</label>
+      {{ form.username }}
+      {% if form.username.errors %}{{ form.username.errors }}{% endif %}
+      {% if form.username.help_text %}<span class="help">{{ form.username.help_text }}</span>{% endif %}
+    </div>
 
-      <button type="submit">Create account</button>
-    </form>
+    <div class="form-field">
+      <label for="{{ form.email.id_for_label }}">Email</label>
+      {{ form.email }}
+      {% if form.email.errors %}{{ form.email.errors }}{% endif %}
+      {% if form.email.help_text %}<span class="help">{{ form.email.help_text }}</span>{% endif %}
+    </div>
 
-    <p class="links">
-      Already have an account? <a href="{% url 'voting:login' %}">Sign in</a>
-    </p>
-  </body>
-</html>
+    <div class="form-field">
+      <label for="{{ form.password1.id_for_label }}">Password</label>
+      {{ form.password1 }}
+      {% if form.password1.errors %}{{ form.password1.errors }}{% endif %}
+      {% if form.password1.help_text %}<span class="help">{{ form.password1.help_text }}</span>{% endif %}
+    </div>
+
+    <div class="form-field">
+      <label for="{{ form.password2.id_for_label }}">Confirm password</label>
+      {{ form.password2 }}
+      {% if form.password2.errors %}{{ form.password2.errors }}{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--solid">Create account</button>
+    </div>
+  </form>
+
+  <p class="form-footer">
+    Already have an account? <a href="{% url 'voting:login' %}">Sign in</a>
+  </p>
+</div>
+{% endblock %}

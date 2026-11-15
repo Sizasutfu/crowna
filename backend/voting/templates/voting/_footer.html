@@ -1,0 +1,18 @@
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 24V11l6 5 6-9 6 9 6-5v13z"/>
+        <path d="M4 27h24"/>
+      </svg>
+      Crowna
+    </div>
+    <p class="footer-note">A competition voting platform for musicians, creators, and artists.</p>
+    <nav class="footer-links">
+      <a href="{% url 'voting:contest_list' %}">Contests</a>
+      {% if not user.is_authenticated %}
+        <a href="{% url 'voting:login' %}">Sign in</a>
+      {% endif %}
+    </nav>
+  </div>
+</footer>

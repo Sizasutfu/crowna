@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Crowna{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}A voting platform for musicians, creators, and artists.{% endblock %}">
+  {% block meta %}{% endblock %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'voting/css/site.css' %}">
+</head>
+<body>
+  {% include "voting/_nav.html" %}
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  {% include "voting/_footer.html" %}
+</body>
+</html>

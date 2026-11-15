@@ -1,9 +1,12 @@
 from datetime import timedelta
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from .models import Contest, Contestant, Vote
 
@@ -342,3 +345,222 @@ class ContestantProfileTests(TestCase):
         self.assertEqual(r.status_code, 302)
         self.assertIn(f"/contests/{self.contest.id}/", r["Location"])
         self.assertNotIn("evil", r["Location"])
+
+
+# ---------------------------------------------------------------------------
+# Landing page
+# ---------------------------------------------------------------------------
+
+@override_settings(PASSWORD_HASHERS=[FAST_HASHER])
+class LandingPageTests(TestCase):
+    def test_home_renders(self):
+        r = self.client.get(reverse("voting:home"))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Crown the")
+
+    def test_contest_list_lives_at_contests_path(self):
+        r = self.client.get("/contests/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_home_shows_open_contests(self):
+        now = timezone.now()
+        Contest.objects.create(
+            title="Live Contest",
+            slug="live-contest",
+            status=Contest.Status.OPEN,
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(hours=1),
+        )
+        r = self.client.get(reverse("voting:home"))
+        self.assertContains(r, "Live Contest")
+
+    def test_home_hides_closed_contests_from_featured_section(self):
+        now = timezone.now()
+        Contest.objects.create(
+            title="Closed Contest",
+            slug="closed-contest",
+            status=Contest.Status.CLOSED,
+            starts_at=now - timedelta(days=2),
+            ends_at=now - timedelta(days=1),
+            closed_at=now - timedelta(days=1),
+        )
+        r = self.client.get(reverse("voting:home"))
+        self.assertNotContains(r, "Closed Contest")
+
+    def test_signup_redirects_to_home(self):
+        r = self.client.post("/signup/", {
+            "username": "newuser",
+            "email": "new@example.com",
+            "password1": "securepass123",
+            "password2": "securepass123",
+        })
+        self.assertEqual(r.status_code, 302)
+        self.assertEqual(r["Location"], reverse("voting:home"))
+
+
+# ---------------------------------------------------------------------------
+# Results page
+# ---------------------------------------------------------------------------
+
+@override_settings(PASSWORD_HASHERS=[FAST_HASHER])
+class ResultsPageTests(TestCase):
+    def setUp(self):
+        self.now = timezone.now()
+        self.contest = Contest.objects.create(
+            title="Results Contest",
+            slug="results-contest",
+            status=Contest.Status.CLOSED,
+            starts_at=self.now - timedelta(days=2),
+            ends_at=self.now - timedelta(days=1),
+            closed_at=self.now - timedelta(days=1),
+        )
+        self.winner = Contestant.objects.create(
+            contest=self.contest, name="Winner", slug="winner", vote_count=100,
+        )
+        self.second = Contestant.objects.create(
+            contest=self.contest, name="Second", slug="second", vote_count=50,
+        )
+        self.third = Contestant.objects.create(
+            contest=self.contest, name="Third", slug="third", vote_count=25,
+        )
+
+    def results_url(self):
+        return reverse("voting:contest_results", args=[self.contest.id])
+
+    def test_results_renders_for_closed_contest(self):
+        r = self.client.get(self.results_url())
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Results Contest")
+        self.assertContains(r, "Winner")
+
+    def test_results_redirects_when_contest_open(self):
+        self.contest.status = Contest.Status.OPEN
+        self.contest.closed_at = None
+        self.contest.save()
+        r = self.client.get(self.results_url())
+        self.assertEqual(r.status_code, 302)
+        self.assertIn(f"/contests/{self.contest.id}/", r["Location"])
+
+    def test_results_identifies_correct_winner(self):
+        r = self.client.get(self.results_url())
+        self.assertEqual(len(r.context["winners"]), 1)
+        self.assertEqual(r.context["winners"][0].name, "Winner")
+
+    def test_results_aggregates_total_votes(self):
+        r = self.client.get(self.results_url())
+        self.assertEqual(r.context["total_votes"], 175)
+
+    def test_results_handles_ties(self):
+        Contestant.objects.filter(pk=self.second.pk).update(vote_count=100)
+        r = self.client.get(self.results_url())
+        winner_names = {w.name for w in r.context["winners"]}
+        self.assertEqual(winner_names, {"Winner", "Second"})
+
+    def test_results_with_no_votes(self):
+        Contestant.objects.filter(contest=self.contest).update(vote_count=0)
+        r = self.client.get(self.results_url())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.context["winners"]), 0)
+        self.assertContains(r, "No votes were cast")
+
+    def test_results_has_open_graph_tags(self):
+        r = self.client.get(self.results_url())
+        self.assertContains(r, 'property="og:title"')
+        self.assertContains(r, 'property="og:url"')
+        self.assertContains(r, 'name="twitter:card"')
+
+    def test_nonexistent_contest_is_404(self):
+        r = self.client.get(reverse("voting:contest_results", args=[999999]))
+        self.assertEqual(r.status_code, 404)
+
+    def test_closed_contest_detail_shows_results_link(self):
+        r = self.client.get(reverse("voting:contest_detail", args=[self.contest.id]))
+        self.assertContains(r, "View final results")
+
+
+# ---------------------------------------------------------------------------
+# Image conversion (WebP)
+# ---------------------------------------------------------------------------
+
+@override_settings(PASSWORD_HASHERS=[FAST_HASHER])
+class ImageConversionTests(TestCase):
+    def setUp(self):
+        self.now = timezone.now()
+        self.contest = Contest.objects.create(
+            title="Image Contest",
+            slug="image-contest",
+            status=Contest.Status.OPEN,
+            starts_at=self.now - timedelta(hours=1),
+            ends_at=self.now + timedelta(hours=1),
+        )
+
+    def _jpg_upload(self, name="test.jpg", size=(100, 100), color="red"):
+        img = Image.new("RGB", size, color=color)
+        buf = BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+        return SimpleUploadedFile(name, buf.read(), content_type="image/jpeg")
+
+    def _webp_upload(self, name="already.webp", size=(100, 100), color="blue"):
+        img = Image.new("RGB", size, color=color)
+        buf = BytesIO()
+        img.save(buf, format="WEBP")
+        buf.seek(0)
+        return SimpleUploadedFile(name, buf.read(), content_type="image/webp")
+
+    def _is_webp(self, field_file):
+        field_file.open("rb")
+        header = field_file.read(12)
+        field_file.close()
+        return header[:4] == b"RIFF" and header[8:12] == b"WEBP"
+
+    def test_contestant_jpg_is_converted_to_webp(self):
+        contestant = Contestant.objects.create(
+            contest=self.contest,
+            name="Jpg Art",
+            slug="jpg-art",
+            image=self._jpg_upload(),
+        )
+        contestant.refresh_from_db()
+        self.assertTrue(contestant.image.name.lower().endswith(".webp"))
+        self.assertTrue(self._is_webp(contestant.image))
+
+    def test_contest_jpg_is_converted_to_webp(self):
+        contest = Contest.objects.create(
+            title="Cover Contest",
+            slug="cover-contest",
+            status=Contest.Status.OPEN,
+            starts_at=self.now - timedelta(hours=1),
+            ends_at=self.now + timedelta(hours=1),
+            image=self._jpg_upload("cover.jpg"),
+        )
+        contest.refresh_from_db()
+        self.assertTrue(contest.image.name.lower().endswith(".webp"))
+        self.assertTrue(self._is_webp(contest.image))
+
+    def test_existing_webp_upload_is_not_reconverted(self):
+        contestant = Contestant.objects.create(
+            contest=self.contest,
+            name="WebP Native",
+            slug="webp-native",
+            image=self._webp_upload(),
+        )
+        contestant.refresh_from_db()
+        self.assertTrue(contestant.image.name.lower().endswith(".webp"))
+        self.assertIn("already", contestant.image.name)
+
+    def test_oversized_image_is_downscaled(self):
+        contestant = Contestant.objects.create(
+            contest=self.contest,
+            name="Big Art",
+            slug="big-art",
+            image=self._jpg_upload("big.jpg", size=(3000, 2000), color="green"),
+        )
+        contestant.refresh_from_db()
+
+        contestant.image.open("rb")
+        saved = Image.open(contestant.image)
+        contestant.image.close()
+
+        # Contestant max_dim is 800 in signals.py
+        self.assertLessEqual(max(saved.size), 800)

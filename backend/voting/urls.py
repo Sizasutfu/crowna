@@ -6,7 +6,8 @@ from . import views
 app_name = "voting"
 
 urlpatterns = [
-    path("", views.contest_list, name="contest_list"),
+    path("", views.home, name="home"),
+    path("contests/", views.contest_list, name="contest_list"),
     path(
         "login/",
         LoginView.as_view(template_name="voting/login.html"),
@@ -15,6 +16,11 @@ urlpatterns = [
     path("signup/", views.SignupView.as_view(), name="signup"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("contests/<int:contest_id>/", views.contest_detail, name="contest_detail"),
+    path(
+        "contests/<int:contest_id>/results/",
+        views.contest_results,
+        name="contest_results",
+    ),
     path(
         "contestants/<int:contestant_id>/",
         views.contestant_detail,

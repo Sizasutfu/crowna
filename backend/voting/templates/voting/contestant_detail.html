@@ -1,91 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ contestant.name }} — Crowna</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 0 1.25rem 3rem; color: #222; }
-    a { color: #06c; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+{% extends "voting/base.html" %}
 
-    .crumb { font-size: 0.9rem; color: #888; margin-bottom: 1rem; }
+{% block title %}{{ contestant.name }} — {{ contest.title }} — Crowna{% endblock %}
 
-    .profile-header {
-      display: flex; gap: 1.25rem; align-items: center;
-      padding: 1.5rem 0 1.75rem; border-bottom: 1px solid #eee;
-    }
-    .avatar-lg {
-      height: 120px; width: 120px; border-radius: 50%;
-      object-fit: cover; flex-shrink: 0; display: block;
-      border: 3px solid #f4f4f8;
-    }
-    .avatar-lg-placeholder {
-      height: 120px; width: 120px; border-radius: 50%; flex-shrink: 0;
-      background: #f4f4f8; display: flex; align-items: center; justify-content: center;
-      color: #aab; font-weight: 700; font-size: 2.5rem;
-    }
-    .profile-meta h1 { margin: 0 0 0.35rem; font-size: 1.5rem; }
-    .profile-meta .contest-link { font-size: 0.9rem; color: #666; }
-    .profile-meta .status { font-size: 0.9rem; margin-top: 0.35rem; }
-    .closed { color: #b00; font-weight: 600; }
-
-    .bio {
-      margin: 1.5rem 0; color: #333; line-height: 1.6; font-size: 0.95rem;
-      white-space: pre-wrap;
-    }
-
-    .stats {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;
-      margin: 1.5rem 0;
-    }
-    .stat {
-      background: #fafafd; border: 1px solid #eee; border-radius: 10px;
-      padding: 0.9rem 1rem; text-align: center;
-    }
-    .stat-value { font-size: 1.5rem; font-weight: 700; color: #06c; font-variant-numeric: tabular-nums; }
-    .stat-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
-
-    .vote-action { margin-top: 1.5rem; }
-    .btn {
-      display: inline-block; cursor: pointer;
-      padding: 0.7rem 2rem; border: none; border-radius: 8px;
-      background: #06c; color: #fff; font-size: 1rem; font-weight: 600;
-      text-decoration: none;
-    }
-    .btn:hover { background: #0055aa; text-decoration: none; color: #fff; }
-    .voted {
-      display: inline-block; padding: 0.7rem 1.25rem; border-radius: 8px;
-      background: #e8f7ea; color: #080; font-size: 0.9rem; font-weight: 600;
-    }
-  </style>
-</head>
-<body>
-  {% include "voting/_nav.html" %}
+{% block content %}
+<div class="wrap wrap-narrow">
 
   <p class="crumb">
-    <a href="{% url 'voting:contest_detail' contest.id %}">{{ contest.title }}</a>
-    / {{ contestant.name }}
+    <a href="{% url 'voting:contest_list' %}">Contests</a> /
+    <a href="{% url 'voting:contest_detail' contest.id %}">{{ contest.title }}</a> /
+    {{ contestant.name }}
   </p>
 
-  <div class="profile-header">
+  <div class="profile">
     {% if contestant.image %}
-      <img class="avatar-lg" src="{{ contestant.image.url }}" alt="{{ contestant.name }}">
+      <img class="profile-avatar" src="{{ contestant.image.url }}" alt="{{ contestant.name }}">
     {% else %}
-      <div class="avatar-lg-placeholder">{{ contestant.name|slice:":1"|upper }}</div>
+      <div class="profile-avatar">{{ contestant.name|slice:":1"|upper }}</div>
     {% endif %}
-
-    <div class="profile-meta">
+    <div>
       <h1>{{ contestant.name }}</h1>
-      <div class="contest-link">
-        in <a href="{% url 'voting:contest_detail' contest.id %}">{{ contest.title }}</a>
-      </div>
-      <div class="status">
+      <div class="profile-meta">
+        <span>In <a href="{% url 'voting:contest_detail' contest.id %}">{{ contest.title }}</a></span>
         {% if is_open %}
-          Voting open until {{ contest.ends_at|date:"M j, H:i" }}
+          <span>Voting open until {{ contest.ends_at|date:"M j, H:i" }}</span>
         {% else %}
-          <span class="closed">Voting closed</span>
+          <span style="color: var(--wine);">Voting closed</span>
         {% endif %}
       </div>
     </div>
@@ -95,37 +34,37 @@
     <div class="bio">{{ contestant.bio }}</div>
   {% endif %}
 
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value">{{ contestant.vote_count }}</div>
-      <div class="stat-label">Votes</div>
+  <div class="stat-grid">
+    <div class="stat-cell">
+      <div class="num">{{ contestant.vote_count }}</div>
+      <div class="lbl">Votes</div>
     </div>
-    <div class="stat">
-      <div class="stat-value">#{{ rank }}</div>
-      <div class="stat-label">of {{ total_contestants }}</div>
+    <div class="stat-cell">
+      <div class="num">#{{ rank }}</div>
+      <div class="lbl">of {{ total_contestants }}</div>
     </div>
-    <div class="stat">
-      <div class="stat-value">{{ share }}%</div>
-      <div class="stat-label">of all votes</div>
+    <div class="stat-cell">
+      <div class="num">{{ share }}%</div>
+      <div class="lbl">of all votes</div>
     </div>
   </div>
 
   {% if is_open %}
-    <div class="vote-action">
+    <div class="vote-cta">
       {% if user_voted %}
-        <span class="voted">✓ You already voted in this contest</span>
+        <span class="voted-tag">✓ You already voted in this contest</span>
       {% elif user.is_authenticated %}
         <form method="post" action="{% url 'voting:cast_vote' contest.id contestant.id %}">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.path }}">
-          <button class="btn" type="submit">Vote for {{ contestant.name }}</button>
+          <button class="btn btn--solid" type="submit">Vote for {{ contestant.name }}</button>
         </form>
       {% else %}
-        <a class="btn" href="{% url 'voting:login' %}?next={{ request.path|urlencode }}">
+        <a class="btn btn--solid" href="{% url 'voting:login' %}?next={{ request.path|urlencode }}">
           Sign in to vote
         </a>
       {% endif %}
     </div>
   {% endif %}
-</body>
-</html>
+</div>
+{% endblock %}
